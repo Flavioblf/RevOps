@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Case RevOps – Nuvem Envio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --blue: #0855FF;
+      --blue-dark: #0340CC;
+      --white: #FFFFFF;
+      --text: #1A1A2E;
+      --muted: #6B7280;
+      --accent: #00D4AA;
+      --warn: #F59E0B;
+      --success: #10B981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #F8FAFF;
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* ── TAB NAV ── */
+    #tab-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      display: flex;
+      align-items: stretch;
+      z-index: 1000;
+      overflow-x: auto;
+      scrollbar-width: none;
+      transition: background 0.35s, border-color 0.35s, box-shadow 0.35s;
+    }
+    #tab-nav::-webkit-scrollbar { display: none; }
+
+    #tab-nav.on-dark {
+      background: rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+    }
+    #tab-nav.on-light {
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid #E5E7EB;
+      box-shadow: 0 1px 10px rgba(0,0,0,0.07);
+    }
+
+    .tab-logo {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 18px;
+      flex-shrink: 0;
+    }
+    #tab-nav.on-dark  .tab-logo { border-right: 1px solid rgba(255,255,255,0.14); }
+    #tab-nav.on-light .tab-logo { border-right: 1px solid #E5E7EB; }
+
+    .tab-logo-icon { display: flex; align-items: center; }
+    .tab-logo-icon svg { width: 20px; height: 20px; }
+    .tab-logo-text { font-size: 13px; font-weight: 800; letter-spacing: -0.4px; font-family: 'Inter', sans-serif; }
+    #tab-nav.on-dark  .tab-logo-text { color: #fff; }
+    #tab-nav.on-light .tab-logo-text { color: var(--blue); }
+
+    .tab-item {
+      padding: 0 13px;
+      display: flex;
+      align-items: center;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      border: none;
+      background: transparent;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      letter-spacing: -0.1px;
+    }
+    #tab-nav.on-dark  .tab-item { color: rgba(255,255,255,0.52); }
+    #tab-nav.on-dark  .tab-item:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.07); }
+    #tab-nav.on-dark  .tab-item.active { color: #fff; border-bottom-color: #fff; }
+
+    #tab-nav.on-light .tab-item { color: #6B7280; }
+    #tab-nav.on-light .tab-item:hover { color: var(--blue); background: rgba(8,85,255,0.05); }
+    #tab-nav.on-light .tab-item.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    /* ── SLIDES ── */
+    #slides-wrapper { width: 100vw; height: 100vh; position: relative; }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 62px 60px 30px;
+      opacity: 0;
+      transition: opacity 0.38s ease;
+    }
+    .slide.active { display: flex; opacity: 1; }
+
+    /* ── BACKGROUNDS ── */
+    .bg-brand { background: linear-gradient(135deg, #0340CC 0%, #0855FF 60%, #3B82F6 100%); }
+    .bg-white  { background: #F8FAFF; }
+
+    /* ── TYPOGRAPHY ── */
+    .slide-tag {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      margin-bottom: 12px; opacity: 0.7;
+    }
+    h1 { font-size: clamp(2rem,4vw,3.2rem); font-weight: 800; line-height: 1.1; }
+    h2 { font-size: clamp(1.4rem,2.5vw,2rem); font-weight: 700; }
+    h3 { font-size: 1.1rem; font-weight: 700; }
+    .subtitle { font-size: clamp(1rem,1.8vw,1.25rem); opacity: 0.8; margin-top: 12px; }
+
+    /* ── SECTION HEADER ── */
+    .section-header {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 22px; width: 100%;
+    }
+    .section-num {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: rgba(255,255,255,0.92);
+      color: var(--blue);
+      font-weight: 800; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 16px; padding: 20px 24px;
+      backdrop-filter: blur(8px);
+    }
+    .card.light {
+      background: #fff; border: 1px solid #E5E7EB;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .card-icon { font-size: 1.8rem; margin-bottom: 8px; }
+    .card h3   { font-size: 0.95rem; margin-bottom: 6px; }
+    .card p    { font-size: 0.85rem; opacity: 0.75; line-height: 1.5; }
+
+    /* ── STAT BOXES ── */
+    .stat-box {
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px; padding: 18px 22px; text-align: center;
+    }
+    .stat-box.light {
+      background: #fff; border: 1px solid #E5E7EB;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .stat-num {
+      font-size: clamp(1.6rem,3vw,2.4rem);
+      font-weight: 800; line-height: 1; margin-bottom: 4px;
+    }
+    .stat-label { font-size: 0.78rem; opacity: 0.7; }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 20px; font-size: 11px; font-weight: 700;
+    }
+    .badge-blue   { background: rgba(8,85,255,0.15);   color: #2563EB; }
+    .badge-green  { background: rgba(16,185,129,0.15); color: #059669; }
+    .badge-yellow { background: rgba(245,158,11,0.15); color: #D97706; }
+    .badge-red    { background: rgba(239,68,68,0.15);  color: #DC2626; }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      width: 100%; overflow: auto;
+      border-radius: 12px; border: 1px solid #E5E7EB;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th {
+      background: #0855FF; color: #fff;
+      padding: 10px 14px; text-align: left;
+      font-weight: 600; font-size: 0.78rem;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    td { padding: 9px 14px; border-bottom: 1px solid #F3F4F6; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) td { background: #F9FAFB; }
+
+    /* ── FUNNEL ── */
+    .funnel { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+    .funnel-step {
+      border-radius: 8px; padding: 10px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      color: #fff; font-weight: 600; font-size: 0.82rem;
+      transition: transform 0.2s;
+    }
+    .funnel-step:hover { transform: scaleX(1.02); }
+    .funnel-arrow { text-align: center; font-size: 0.7rem; color: rgba(255,255,255,0.45); }
+
+    /* ── TIMELINE ── */
+    .timeline { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; width: 100%; }
+    .month-card { border-radius: 14px; padding: 18px; border: 1px solid rgba(255,255,255,0.15); }
+    .month-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.6; margin-bottom: 6px; }
+    .month-title { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+    .task-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 0.8rem; margin-bottom: 8px; opacity: 0.85;
+    }
+    .task-item::before { content: '▸'; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+    /* ── CODE ── */
+    pre {
+      background: #0d1117; border: 1px solid #30363d;
+      border-radius: 12px; padding: 18px 22px;
+      font-size: 0.72rem; line-height: 1.7;
+      overflow: auto; width: 100%; max-height: 330px; color: #e6edf3;
+    }
+    .kw  { color: #FF7B72; }
+    .fn  { color: #79C0FF; }
+    .str { color: #A5D6FF; }
+    .cm  { color: #8B949E; font-style: italic; }
+    .num { color: #F2CC60; }
+
+    /* ── CHARTS ── */
+    .chart-wrap { position: relative; width: 100%; }
+
+    /* ── LOGO (capa / conclusão) ── */
+    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+    .logo-icon {
+      width: 42px; height: 42px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-text { font-size: 1.1rem; font-weight: 700; color: #fff; }
+
+    /* ── PROGRESS ── */
+    .progress-bar {
+      height: 6px; border-radius: 3px;
+      background: rgba(255,255,255,0.15); overflow: hidden; margin-top: 6px;
+    }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+
+    /* ── GRIDS ── */
+    .two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; }
+    .three-col { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; width: 100%; }
+    .four-col  { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; width: 100%; }
+
+    /* ── COVER ── */
+    #slide-cover { text-align: center; }
+    .cover-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 40px; padding: 6px 16px;
+      font-size: 0.82rem; color: #fff; margin-bottom: 24px;
+    }
+
+    /* ── TEXT HELPERS ── */
+    .text-white  { color: #fff; }
+    .text-dark   { color: var(--text); }
+    .text-muted  { color: var(--muted); }
+    .text-accent { color: var(--accent); }
+    .text-blue   { color: var(--blue); }
+
+    /* ── FONTES CLARAS em slides escuros ── */
+    .bg-brand .card p        { color: rgba(255,255,255,0.9); opacity: 1; }
+    .bg-brand .card strong   { color: #fff; }
+    .bg-brand .card h3       { color: #fff; }
+
+    /* ── SCROLLABLE CONTENT ── */
+    .slide-content {
+      width: 100%; max-width: 1100px;
+      overflow-y: auto; max-height: calc(100vh - 100px);
+      padding-right: 4px;
+    }
+    .slide-content::-webkit-scrollbar { width: 4px; }
+    .slide-content::-webkit-scrollbar-thumb {
+      background: rgba(128,128,128,0.25); border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── TAB NAV ── -->
+<nav id="tab-nav" class="on-dark">
+  <div class="tab-logo">
+    <span class="tab-logo-icon">
+      <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+        <rect width="36" height="36" rx="9" fill="#0855FF"/>
+        <path d="M12.5 17C12.5 13.96 14.96 11.5 18 11.5c2.06 0 3.86 1.1 4.86 2.76" stroke="white" stroke-width="2.3" stroke-linecap="round"/>
+        <path d="M20.5 10.8l3.1 3.5-3.6 1.3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M23.5 19c0 3.04-2.46 5.5-5.5 5.5-2.06 0-3.86-1.1-4.86-2.76" stroke="white" stroke-width="2.3" stroke-linecap="round"/>
+        <path d="M15.5 25.2l-3.1-3.5 3.6-1.3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span class="tab-logo-text">nuvemshop</span>
+  </div>
+  <button class="tab-item active"  onclick="goTo(0)">Home</button>
+  <button class="tab-item"         onclick="goTo(1)">Contexto</button>
+  <button class="tab-item"         onclick="goTo(2)">Segmentação</button>
+  <button class="tab-item"         onclick="goTo(3)">Distribuição</button>
+  <button class="tab-item"         onclick="goTo(4)">Metas</button>
+  <button class="tab-item"         onclick="goTo(5)">Comissão</button>
+  <button class="tab-item"         onclick="goTo(6)">Cronograma</button>
+  <button class="tab-item"         onclick="goTo(7)">Pipeline</button>
+  <button class="tab-item"         onclick="goTo(8)">Cadências</button>
+  <button class="tab-item"         onclick="goTo(9)">IA</button>
+  <button class="tab-item"         onclick="goTo(10)">Consulta SQL</button>
+  <button class="tab-item"         onclick="goTo(11)">KPIs</button>
+  <button class="tab-item"         onclick="goTo(12)">Dashboard</button>
+  <button class="tab-item"         onclick="goTo(13)">Documentação</button>
+  <button class="tab-item"         onclick="goTo(14)">Conclusão</button>
+</nav>
+
+<!-- ═══════════════════════ SLIDES ═══════════════════════ -->
+<div id="slides-wrapper">
+
+  <!-- ── 1: CAPA ── -->
+  <div class="slide bg-brand active" id="slide-cover">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="26" height="26">
+          <path d="M12.5 17C12.5 13.96 14.96 11.5 18 11.5c2.06 0 3.86 1.1 4.86 2.76" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M20.5 10.8l3.1 3.5-3.6 1.3" stroke="white" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M23.5 19c0 3.04-2.46 5.5-5.5 5.5-2.06 0-3.86-1.1-4.86-2.76" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M15.5 25.2l-3.1-3.5 3.6-1.3" stroke="white" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="logo-text">nuvemshop</span>
+    </div>
+    <div class="cover-chip">&#128196; Case Técnico · RevOps Pleno</div>
+    <h1 class="text-white" style="font-size:clamp(2.2rem,5vw,3.8rem); max-width:700px; margin-bottom:16px;">
+      Plano RevOps<br/>Nuvem Envio
+    </h1>
+    <p class="subtitle text-white" style="max-width:520px;">
+      Estratégia para aumentar a aderência logística de <strong>20.000 lojistas</strong> em 3 meses
+    </p>
+    <div style="margin-top:40px; display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+      <div class="stat-box" style="min-width:140px;">
+        <div class="stat-num text-white">20k</div>
+        <div class="stat-label text-white">Lojistas ativos</div>
+      </div>
+      <div class="stat-box" style="min-width:140px;">
+        <div class="stat-num text-white">3</div>
+        <div class="stat-label text-white">Meses de projeto</div>
+      </div>
+      <div class="stat-box" style="min-width:140px;">
+        <div class="stat-num text-white">6</div>
+        <div class="stat-label text-white">Seções do plano</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2: CONTEXTO ── -->
+  <div class="slide bg-brand">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">&#9432;</div>
+        <div>
+          <p class="slide-tag text-white">Diagnóstico</p>
+          <h2 class="text-white">Contexto do Desafio</h2>
+        </div>
+      </div>
+      <div class="two-col" style="margin-bottom:20px;">
+        <div class="card">
+          <div class="card-icon">&#128683;</div>
+          <h3 class="text-white">O Problema</h3>
+          <p>A taxa de <strong>Aderência</strong> (envios via Nuvem Envio ÷ total de vendas) está abaixo do esperado. Lojistas vendem na plataforma mas usam transportadoras externas.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#127919;</div>
+          <h3 class="text-white">O Objetivo</h3>
+          <p>Aumentar a penetração do produto logístico nativo em 3 meses por meio de ação combinada: <strong>time comercial</strong> + <strong>automação</strong>.</p>
+        </div>
+      </div>
+      <div class="four-col">
+        <div class="stat-box">
+          <div class="stat-num" style="color:var(--accent);">R$25</div>
+          <div class="stat-label text-white">Ticket médio de envio</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" style="color:var(--accent);">10%</div>
+          <div class="stat-label text-white">Margem por envio</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" style="color:var(--accent); font-size:1.4rem;">15%<span style="color:rgba(255,255,255,0.45);">→</span>20%</div>
+          <div class="stat-label text-white">Conv. Comercial (hist.→meta)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" style="color:var(--accent); font-size:1.4rem;">5%<span style="color:rgba(255,255,255,0.45);">→</span>8%</div>
+          <div class="stat-label text-white">Conv. Marketing (hist.→meta)</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px; border-left:3px solid var(--accent);">
+        <h3 class="text-white" style="margin-bottom:8px;">&#9888; Gap de Receita Identificado</h3>
+        <p>Cada lojista que não usa Nuvem Envio representa <strong>receita perdida</strong>. Elevando as taxas de conversão de 15%→20% (comercial) e 5%→8% (mktg), o plano gera <strong>+510 ativações acima do baseline histórico</strong> — equivalente a <strong>+R$25.500/mês de margem incremental</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3: SEGMENTAÇÃO ── -->
+  <div class="slide bg-white">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">A</div>
+        <div>
+          <p class="slide-tag text-blue">Segmentação e Priorização</p>
+          <h2 class="text-dark">Quem vamos atacar?</h2>
+        </div>
+      </div>
+      <div class="three-col" style="margin-bottom:20px;">
+        <div class="card light" style="border-top:3px solid #EF4444;">
+          <div style="font-size:1.6rem; margin-bottom:8px;">&#128683;</div>
+          <h3 class="text-dark">Não Utiliza</h3>
+          <div class="stat-num text-dark" style="font-size:1.8rem; color:#EF4444;">8.000</div>
+          <p class="text-muted" style="font-size:0.8rem;">0 envios via Nuvem Envio nos últimos 90 dias</p>
+          <div class="badge badge-red" style="margin-top:8px;">Alta Prioridade</div>
+        </div>
+        <div class="card light" style="border-top:3px solid #F59E0B;">
+          <div style="font-size:1.6rem; margin-bottom:8px;">&#9888;</div>
+          <h3 class="text-dark">Baixo Share of Wallet</h3>
+          <div class="stat-num text-dark" style="font-size:1.8rem; color:#F59E0B;">7.000</div>
+          <p class="text-muted" style="font-size:0.8rem;">Usa Nuvem Envio em menos de 30% dos envios</p>
+          <div class="badge badge-yellow" style="margin-top:8px;">Média Prioridade</div>
+        </div>
+        <div class="card light" style="border-top:3px solid #10B981;">
+          <div style="font-size:1.6rem; margin-bottom:8px;">&#9989;</div>
+          <h3 class="text-dark">Utiliza (Upsell)</h3>
+          <div class="stat-num text-dark" style="font-size:1.8rem; color:#10B981;">5.000</div>
+          <p class="text-muted" style="font-size:0.8rem;">SOW &gt; 30% — potencial de ampliar uso e fidelizar</p>
+          <div class="badge badge-green" style="margin-top:8px;">Retenção &amp; Upsell</div>
+        </div>
+      </div>
+      <div class="card light" style="margin-bottom:16px;">
+        <h3 class="text-dark" style="margin-bottom:12px;">&#127919; Critérios de Segmentação</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div class="task-item text-dark">GMV mensal (volume de vendas na plataforma)</div>
+          <div class="task-item text-dark">Volume de pedidos/mês (frequência de envio)</div>
+          <div class="task-item text-dark">Maturidade da loja (tempo de conta ativa)</div>
+          <div class="task-item text-dark">Região geográfica (cobertura logística disponível)</div>
+          <div class="task-item text-dark">Transportadora atual (custo vs. Nuvem Envio)</div>
+        </div>
+      </div>
+      <div class="card light">
+        <h3 class="text-dark" style="margin-bottom:10px;">&#128200; Perfil Ideal para Ativação (ICP)</h3>
+        <p class="text-muted" style="font-size:0.83rem;">Loja com GMV &gt; R$5k/mês, &gt;20 pedidos/mês, localizada em SP/RJ/MG/RS, categoria com alta frequência de envio (moda, beleza, eletrônicos), e sem contrato exclusivo com transportadora.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4: DISTRIBUIÇÃO ── -->
+  <div class="slide bg-brand">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">A</div>
+        <div>
+          <p class="slide-tag text-white">Segmentação e Priorização</p>
+          <h2 class="text-white">Distribuição da Base</h2>
+        </div>
+      </div>
+      <div class="two-col" style="margin-bottom:20px;">
+        <div class="card" style="border-left:3px solid #fff;">
+          <div style="font-size:1.5rem; margin-bottom:10px;">&#128124;</div>
+          <h3 class="text-white">Time Comercial (Venda Consultiva)</h3>
+          <div class="stat-num" style="color:#fff; font-size:2rem;">3.000</div>
+          <p style="color:rgba(255,255,255,0.75); font-size:0.82rem; margin-top:6px;">15% da base — lojistas com GMV alto e maior potencial de receita</p>
+          <div style="margin-top:14px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:rgba(255,255,255,0.6); margin-bottom:4px;">
+              <span>Não utiliza (alto GMV)</span><span>2.000</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:67%; background:#fff;"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:rgba(255,255,255,0.6); margin-top:8px; margin-bottom:4px;">
+              <span>Baixo SOW (alto GMV)</span><span>1.000</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:33%; background:#fff;"></div></div>
+          </div>
+        </div>
+        <div class="card" style="border-left:3px solid var(--accent);">
+          <div style="font-size:1.5rem; margin-bottom:10px;">&#129302;</div>
+          <h3 class="text-white">Automação (Marketing / PLG)</h3>
+          <div class="stat-num" style="color:var(--accent); font-size:2rem;">17.000</div>
+          <p style="color:rgba(255,255,255,0.75); font-size:0.82rem; margin-top:6px;">85% da base — lojistas com menor GMV, atendidos por e-mail, in-app e onboarding automatizado</p>
+          <div style="margin-top:14px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:rgba(255,255,255,0.6); margin-bottom:4px;">
+              <span>Não utiliza (baixo GMV)</span><span>6.000</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:35%; background:var(--accent);"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:rgba(255,255,255,0.6); margin-top:8px; margin-bottom:4px;">
+              <span>Baixo SOW (baixo GMV)</span><span>6.000</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:35%; background:var(--accent);"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:rgba(255,255,255,0.6); margin-top:8px; margin-bottom:4px;">
+              <span>Ativos para upsell/retenção</span><span>5.000</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:30%; background:var(--accent);"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="background:rgba(255,255,255,0.07);">
+        <h3 class="text-white" style="margin-bottom:10px;">&#128161; Estratégia por Canal</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.82rem; color:rgba(255,255,255,0.78);">
+          <div><strong class="text-white">Comercial:</strong> SDRs qualificam e agendam, Closers apresentam proposta com comparativo de custo vs. transportadora atual, destaque em SLA e rastreamento.</div>
+          <div><strong class="text-white">Automação:</strong> Fluxo de e-mail nurturing (5 touchpoints), in-app banners contextuais na tela de pedidos, notificações push com promoção de primeiro envio grátis.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5: METAS E TIME ── -->
+  <div class="slide bg-white">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">B</div>
+        <div>
+          <p class="slide-tag text-blue">Estrutura de Vendas e Metas</p>
+          <h2 class="text-dark">Time, Metas e Projeção</h2>
+        </div>
+      </div>
+      <div class="two-col" style="margin-bottom:16px;">
+        <div>
+          <div class="card light" style="margin-bottom:14px; border-top:3px solid var(--blue);">
+            <h3 class="text-dark" style="margin-bottom:10px;">&#128101; Estrutura do Time Comercial</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Função</th><th>Qtd</th><th>Foco</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="badge badge-blue">SDR</span></td><td><strong>3</strong></td><td>Prospecção e qualificação (600 contas/mês)</td></tr>
+                  <tr><td><span class="badge badge-green">Closer</span></td><td><strong>5</strong></td><td>Fechamento e ativação (1.000 contas/mês)</td></tr>
+                  <tr><td><span class="badge badge-yellow">CS</span></td><td><strong>1</strong></td><td>Onboarding e 1º envio garantido</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-muted" style="font-size:0.75rem; margin-top:8px;">9 pessoas total · 5 Closers × 40 ativ/mês = <strong>200 ativ. comerciais no M3</strong> · SDRs: qualificação ativa via outbound</p>
+          </div>
+          <div class="card light" style="border-top:3px solid var(--success);">
+            <h3 class="text-dark" style="margin-bottom:8px;">&#127942; Metas por Closer (Mensal)</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+              <div class="stat-box light" style="padding:12px;">
+                <div class="stat-num" style="font-size:1.2rem; color:var(--blue);">32→40</div>
+                <div class="stat-label">Ativações/mês (ramp M1→M3)</div>
+              </div>
+              <div class="stat-box light" style="padding:12px;">
+                <div class="stat-num" style="font-size:1.4rem; color:var(--success);">200</div>
+                <div class="stat-label">Contas gerenciadas</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card light" style="border-top:3px solid var(--accent); margin-bottom:14px;">
+            <h3 class="text-dark" style="margin-bottom:10px;">&#127919; Meta Global do Trimestre</h3>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div class="stat-box light">
+                <div class="stat-num" style="color:var(--blue);">540</div>
+                <div class="stat-label">Ativações · Canal Comercial (média 18% de 3.000)</div>
+              </div>
+              <div class="stat-box light">
+                <div class="stat-num" style="color:var(--accent);">1.120</div>
+                <div class="stat-label">Ativações · Automação (média 6,6% de 17.000)</div>
+              </div>
+              <div class="stat-box light" style="border:2px solid var(--blue);">
+                <div class="stat-num" style="color:var(--blue);">1.660</div>
+                <div class="stat-label">&#127942; Total de novas ativações no trimestre</div>
+              </div>
+            </div>
+          </div>
+          <div class="card light">
+            <h3 class="text-dark" style="margin-bottom:8px;">&#128184; Impacto Financeiro vs. Baseline</h3>
+            <p class="text-muted" style="font-size:0.78rem; margin-bottom:10px;">20 envios/mês por lojista · ticket R$25 · margem 10%</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+              <div class="stat-box light" style="border-top:2px solid #D1D5DB;">
+                <div style="font-size:0.65rem; font-weight:700; color:#9CA3AF; letter-spacing:0.5px; margin-bottom:3px;">BASELINE HISTÓRICO</div>
+                <div class="stat-num" style="font-size:1.1rem; color:#9CA3AF;">R$ 57.500</div>
+                <div class="stat-label">Margem/mês (1.150 ativ.)</div>
+              </div>
+              <div class="stat-box light" style="border-top:2px solid var(--success);">
+                <div style="font-size:0.65rem; font-weight:700; color:var(--success); letter-spacing:0.5px; margin-bottom:3px;">META DO PROJETO</div>
+                <div class="stat-num" style="font-size:1.1rem; color:var(--success);">R$ 83.000</div>
+                <div class="stat-label">Margem/mês (1.660 ativ.)</div>
+              </div>
+            </div>
+            <div class="stat-box light" style="border:2px solid var(--success);">
+              <div class="stat-num" style="font-size:1.2rem; color:var(--success);">+R$ 25.500/mês</div>
+              <div class="stat-label">&#128200; Ganho incremental do projeto (+44% vs. baseline)</div>
+            </div>
+            <div style="margin-top:12px; background:#EEF2FF; border-radius:10px; padding:11px 13px;">
+              <div style="font-weight:700; color:#4338CA; font-size:0.67rem; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Retorno sobre Investimento — LTV × CAC</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                <div class="stat-box light" style="padding:9px; border-top:2px solid #4338CA;">
+                  <div class="stat-num" style="font-size:1rem; color:#4338CA;">R$ 900</div>
+                  <div class="stat-label">LTV / lojista ativado<br><span style="font-size:0.62rem;">18 meses × 20 envios × R$2,50</span></div>
+                </div>
+                <div class="stat-box light" style="padding:9px; border-top:2px solid #6B7280;">
+                  <div class="stat-num" style="font-size:1rem; color:#374151;">~R$ 80k/mês</div>
+                  <div class="stat-label">Custo do time<br><span style="font-size:0.62rem;">9 pessoas · salário + encargos CLT</span></div>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div class="stat-box light" style="padding:9px; border:1.5px solid #4338CA;">
+                  <div class="stat-num" style="font-size:1rem; color:#4338CA;">2× &nbsp;/&nbsp; 33×</div>
+                  <div class="stat-label">LTV:CAC Comercial / Automação</div>
+                </div>
+                <div class="stat-box light" style="padding:9px; border:1.5px solid var(--blue);">
+                  <div class="stat-num" style="font-size:1rem; color:var(--blue);">~9m &nbsp;/&nbsp; &lt;1m</div>
+                  <div class="stat-label">Payback Comercial / Automação</div>
+                </div>
+              </div>
+              <p style="font-size:0.65rem; color:#9CA3AF; margin-top:7px; line-height:1.6;">CAC comercial = R$240k (time 3m) ÷ 540 ativ. = R$444 · CAC automação = R$30k (ferramentas) ÷ 1.120 ativ. = R$27 · Premissa LTV: 18 meses de retenção média estimada.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card light" style="margin-top:14px;">
+        <h3 class="text-dark" style="margin-bottom:10px;">&#128200; Escalonamento de Conversão — Ramp-up Trimestral</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Mês</th><th>Taxa Comercial</th><th>Ativ. Comercial</th><th>Taxa Marketing</th><th>Ativ. Marketing</th><th>Total</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-blue">Mês 1</span> Setup</td><td>16%</td><td>160</td><td>5,5%</td><td>330</td><td><strong>490</strong></td></tr>
+              <tr><td><span class="badge badge-yellow">Mês 2</span> Aceleração</td><td>18%</td><td>180</td><td>6,5%</td><td>390</td><td><strong>570</strong></td></tr>
+              <tr><td><span class="badge badge-green">Mês 3</span> Otimização</td><td><strong>20%</strong></td><td>200</td><td><strong>8%</strong></td><td>400</td><td><strong>600</strong></td></tr>
+              <tr style="background:#EEF2FF;"><td><strong>Total</strong></td><td style="color:var(--blue); font-weight:700;">18% médio</td><td><strong>540</strong></td><td style="color:var(--blue); font-weight:700;">6,6% médio</td><td><strong>1.120</strong></td><td><strong style="color:var(--blue);">1.660</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-muted" style="font-size:0.75rem; margin-top:8px;">&#128161; Melhora progressiva via lead scoring preditivo, personalização de pitch com IA e otimização contínua dos fluxos de automação (ver slide D · IA)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6: COMISSIONAMENTO ── -->
+  <div class="slide bg-brand">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">B</div>
+        <div>
+          <p class="slide-tag text-white">Estrutura de Vendas</p>
+          <h2 class="text-white">Modelo de Comissionamento</h2>
+        </div>
+      </div>
+      <!-- Três componentes de comissão -->
+      <div class="three-col" style="margin-bottom:14px;">
+        <div class="card" style="border-top:3px solid var(--accent);">
+          <div style="font-size:1.3rem; margin-bottom:6px;">&#128181;</div>
+          <h3 class="text-white">Bônus de Ativação</h3>
+          <div class="stat-num" style="color:var(--accent); font-size:1.6rem; margin:8px 0;">R$ 60</div>
+          <p>Por loja ativada com mínimo de <strong>10 envios</strong> nos primeiros 30 dias</p>
+          <div style="margin-top:8px; background:rgba(0,212,170,0.15); border-radius:7px; padding:6px 10px; font-size:0.72rem; color:rgba(255,255,255,0.85);">
+            10 envios = R$25 de margem gerada antes do pagamento · payback em ~2 meses
+          </div>
+        </div>
+        <div class="card" style="border-top:3px solid rgba(255,255,255,0.6);">
+          <div style="font-size:1.3rem; margin-bottom:6px;">&#128200;</div>
+          <h3 class="text-white">Comissão Recorrente</h3>
+          <div class="stat-num" style="color:#fff; font-size:1.6rem; margin:8px 0;">3%</div>
+          <p>Sobre receita de envios do cliente nos <strong>6 meses</strong> seguintes à ativação</p>
+          <div style="margin-top:8px; background:rgba(255,255,255,0.1); border-radius:7px; padding:6px 10px; font-size:0.72rem; color:rgba(255,255,255,0.85);">
+            3% × R$500/mês = R$15/mês por lojista · total recorrente: R$90 por ativação
+          </div>
+        </div>
+        <div class="card" style="border-top:3px solid #F59E0B;">
+          <div style="font-size:1.3rem; margin-bottom:6px;">&#127942;</div>
+          <h3 class="text-white">Acelerador de Qualidade</h3>
+          <div class="stat-num" style="color:#F59E0B; font-size:1.6rem; margin:8px 0;">R$ 120</div>
+          <p>Bônus adicional se loja atingir <strong>50+ envios</strong> no 1º mês após ativação</p>
+          <div style="margin-top:8px; background:rgba(245,158,11,0.15); border-radius:7px; padding:6px 10px; font-size:0.72rem; color:rgba(255,255,255,0.85);">
+            50 envios = R$125 de margem em M1 · acelerador custa menos do que 1 mês de margem
+          </div>
+        </div>
+      </div>
+
+      <!-- Viabilidade + Earnings -->
+      <div class="two-col" style="gap:14px;">
+        <div class="card" style="border-left:3px solid var(--accent);">
+          <h3 class="text-white" style="margin-bottom:12px; font-size:0.9rem;">&#128200; Viabilidade do Modelo — Economia por Lojista</h3>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+            <div style="background:rgba(255,255,255,0.08); border-radius:8px; padding:10px; text-align:center;">
+              <div style="font-size:0.65rem; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Comissão total</div>
+              <div style="font-size:1.2rem; font-weight:800; color:#F59E0B;">R$ 150</div>
+              <div style="font-size:0.68rem; color:rgba(255,255,255,0.6); margin-top:2px;">R$60 ativação + R$90 recorrente</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.08); border-radius:8px; padding:10px; text-align:center;">
+              <div style="font-size:0.65rem; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Margem 6 meses</div>
+              <div style="font-size:1.2rem; font-weight:800; color:var(--accent);">R$ 300</div>
+              <div style="font-size:0.68rem; color:rgba(255,255,255,0.6); margin-top:2px;">6 × 20 envios × R$2,50</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.08); border-radius:8px; padding:10px; text-align:center;">
+              <div style="font-size:0.65rem; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">% comissão / LTV</div>
+              <div style="font-size:1.2rem; font-weight:800; color:#fff;">17%</div>
+              <div style="font-size:0.68rem; color:rgba(255,255,255,0.6); margin-top:2px;">R$150 ÷ R$900 (18 meses)</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.08); border-radius:8px; padding:10px; text-align:center;">
+              <div style="font-size:0.65rem; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Payback do bônus</div>
+              <div style="font-size:1.2rem; font-weight:800; color:var(--accent);">~2 meses</div>
+              <div style="font-size:0.68rem; color:rgba(255,255,255,0.6); margin-top:2px;">margem mensal líquida cobre R$60</div>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,0.07); border-radius:8px; padding:8px 12px; font-size:0.72rem; color:rgba(255,255,255,0.75);">
+            <strong class="text-white">Regras de proteção:</strong> Gate de 10 envios evita ativações sem intenção · Clawback se churn &lt;60 dias · Bônus de equipe +20% se time bate 110% da meta · Sem cap
+          </div>
+        </div>
+
+        <div class="card" style="border-left:3px solid rgba(255,255,255,0.4);">
+          <h3 class="text-white" style="margin-bottom:12px; font-size:0.9rem;">&#128181; Projeção de Ganhos do Closer (mensal)</h3>
+          <div class="table-wrap">
+            <table style="font-size:0.78rem;">
+              <thead>
+                <tr><th>Fase</th><th>Ativ.</th><th>Bônus</th><th>Recorrente</th><th>Variável</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge badge-blue">M1 — Ramp</span></td>
+                  <td>32</td>
+                  <td>R$1.920</td>
+                  <td>~R$480</td>
+                  <td><strong>~R$2.400</strong></td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-yellow">M3 — Meta</span></td>
+                  <td>40</td>
+                  <td>R$2.400</td>
+                  <td>~R$2.400</td>
+                  <td><strong>~R$4.800</strong></td>
+                </tr>
+                <tr style="background:#EEF2FF;">
+                  <td><span class="badge badge-green">M6 — Maturidade</span></td>
+                  <td>40</td>
+                  <td>R$2.400</td>
+                  <td>~R$3.600</td>
+                  <td><strong style="color:var(--blue);">~R$6.000</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:10px; background:rgba(255,255,255,0.07); border-radius:8px; padding:8px 12px; font-size:0.72rem; color:rgba(255,255,255,0.75); line-height:1.7;">
+            Recorrente cresce mês a mês à medida que cohorts se acumulam · pico em M6 quando 6 cohorts de 40 lojistas estão simultaneamente no período de 6 meses · base salarial ~R$3.500 não incluída
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 7: CRONOGRAMA ── -->
+  <div class="slide bg-white">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">C</div>
+        <div>
+          <p class="slide-tag text-blue">Cronograma</p>
+          <h2 class="text-dark">Plano de Ataque em 3 Meses</h2>
+        </div>
+      </div>
+      <div class="timeline" style="margin-bottom:20px;">
+        <div class="month-card" style="background:linear-gradient(135deg,#EEF2FF,#DBEAFE);">
+          <div class="month-label text-blue">Semanas 1–4</div>
+          <div class="month-title text-dark">&#128640; Mês 1 — Setup e Ataque</div>
+          <div class="task-item text-dark">Segmentação e enriquecimento da base no CRM</div>
+          <div class="task-item text-dark">Configuração de fluxos de automação (HubSpot/RD)</div>
+          <div class="task-item text-dark">Onboarding do time comercial e definição de território</div>
+          <div class="task-item text-dark">Ataque Tier 1: 1.200 contas de alto GMV</div>
+          <div class="task-item text-dark">Disparo de campanha de e-mail para 6.000 contas automação</div>
+          <div style="margin-top:12px; background:#DBEAFE; border-radius:8px; padding:8px 12px; font-size:0.78rem; color:#1D4ED8;"><strong>Meta:</strong> 160 comercial (16%) + 330 mktg (5,5%) = <strong>490 ativações</strong></div>
+        </div>
+        <div class="month-card" style="background:linear-gradient(135deg,#F0FDF4,#D1FAE5);">
+          <div class="month-label" style="color:#059669;">Semanas 5–8</div>
+          <div class="month-title text-dark">&#9889; Mês 2 — Aceleração</div>
+          <div class="task-item text-dark">Ataque Tier 1 restante + início do Tier 2</div>
+          <div class="task-item text-dark">2ª rodada de e-mails + ativação de in-app banners</div>
+          <div class="task-item text-dark">Review de pipeline + otimização de mensagens</div>
+          <div class="task-item text-dark">Webinar "Como economizar em frete" para lojistas</div>
+          <div class="task-item text-dark">Análise de churn dos ativados no Mês 1</div>
+          <div style="margin-top:12px; background:#D1FAE5; border-radius:8px; padding:8px 12px; font-size:0.78rem; color:#065F46;"><strong>Meta:</strong> 180 comercial (18%) + 390 mktg (6,5%) = <strong>570 ativações</strong></div>
+        </div>
+        <div class="month-card" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);">
+          <div class="month-label" style="color:#D97706;">Semanas 9–12</div>
+          <div class="month-title text-dark">&#127942; Mês 3 — Otimização</div>
+          <div class="task-item text-dark">Finalização do ataque Tier 2</div>
+          <div class="task-item text-dark">Upsell e retenção da base já ativada</div>
+          <div class="task-item text-dark">Push de urgência: oferta especial de encerramento</div>
+          <div class="task-item text-dark">Análise de cohort e apresentação de resultados</div>
+          <div class="task-item text-dark">Playbook documentado para trimestres futuros</div>
+          <div style="margin-top:12px; background:#FDE68A; border-radius:8px; padding:8px 12px; font-size:0.78rem; color:#92400E;"><strong>Meta:</strong> 200 comercial (20%) + 400 mktg (8%) = <strong>600 ativações</strong></div>
+        </div>
+      </div>
+      <div class="card light" style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:16px;">
+        <div class="stat-box light">
+          <div class="stat-num" style="font-size:1.3rem; color:var(--blue);">540</div>
+          <div class="stat-label">Ativações Comercial</div>
+        </div>
+        <div class="stat-box light">
+          <div class="stat-num" style="font-size:1.3rem; color:var(--accent);">1.120</div>
+          <div class="stat-label">Ativações Automação</div>
+        </div>
+        <div class="stat-box light">
+          <div class="stat-num" style="font-size:1.3rem; color:var(--success);">1.660</div>
+          <div class="stat-label">Total Trimestre</div>
+        </div>
+        <div class="stat-box light">
+          <div class="stat-num" style="font-size:1.3rem; color:#8B5CF6;">+8,3 p.p.</div>
+          <div class="stat-label">Ganho de Aderência</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 8: PIPELINE CRM ── -->
+  <div class="slide bg-brand">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">D</div>
+        <div>
+          <p class="slide-tag text-white">Pipeline e Processos</p>
+          <h2 class="text-white">Funil de Vendas no CRM</h2>
+        </div>
+      </div>
+      <div class="funnel" style="margin-bottom:16px;">
+        <div class="funnel-step" style="background:rgba(255,255,255,0.22); width:100%;">
+          <span>&#128269; 1. Lead Identificado</span>
+          <span style="font-size:0.78rem; opacity:0.8;">3.000 contas · Critério: GMV alto + não usa Nuvem Envio</span>
+        </div>
+        <div class="funnel-arrow">&#9660; Gatilho: Contato confirmado (call / e-mail reply)</div>
+        <div class="funnel-step" style="background:rgba(255,255,255,0.17); width:90%;">
+          <span>&#128222; 2. Primeiro Contato</span>
+          <span style="font-size:0.78rem; opacity:0.8;">~1.500 · SDR apresenta proposta de valor inicial</span>
+        </div>
+        <div class="funnel-arrow">&#9660; Gatilho: Lojista demonstra interesse e agenda demo</div>
+        <div class="funnel-step" style="background:rgba(255,255,255,0.13); width:80%;">
+          <span>&#128205; 3. Demo / Apresentação</span>
+          <span style="font-size:0.78rem; opacity:0.8;">~700 · Closer apresenta comparativo de custo e SLA</span>
+        </div>
+        <div class="funnel-arrow">&#9660; Gatilho: Demo concluída, lojista solicita proposta formal</div>
+        <div class="funnel-step" style="background:rgba(0,0,0,0.15); width:65%;">
+          <span>&#128203; 4. Proposta Enviada</span>
+          <span style="font-size:0.78rem; opacity:0.8;">~400 · Proposta com simulação de economia no frete</span>
+        </div>
+        <div class="funnel-arrow">&#9660; Gatilho: Proposta aceita, negociação de condições</div>
+        <div class="funnel-step" style="background:rgba(0,0,0,0.22); width:50%;">
+          <span>&#129309; 5. Negociação</span>
+          <span style="font-size:0.78rem; opacity:0.8;">~250 · Ajuste de condições comerciais (desconto, trial)</span>
+        </div>
+        <div class="funnel-arrow">&#9660; Gatilho: Acordo fechado, conta integrada ao Nuvem Envio</div>
+        <div class="funnel-step" style="background:#047857; width:40%;">
+          <span>&#9989; 6. 1ª Ativação (Closed-Won)</span>
+          <span style="font-size:0.78rem; opacity:0.8;">~540 · Meta: 20% de conversão no M3 (ramp-up trimestral)</span>
+        </div>
+        <div class="funnel-arrow">&#9660; Gatilho: 3+ envios em 30 dias</div>
+        <div class="funnel-step" style="background:#065F46; width:55%;">
+          <span>&#128260; 7. Cliente Recorrente</span>
+          <span style="font-size:0.78rem; opacity:0.8;">Monitoramento de SOW, health score e upsell</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 9: CADÊNCIAS ── -->
+  <div class="slide bg-white">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">D</div>
+        <div>
+          <p class="slide-tag text-blue">Pipeline e Processos</p>
+          <h2 class="text-dark">Cadências SDR e Closer</h2>
+        </div>
+      </div>
+
+      <div style="background:#FFF7ED; border:1px solid #FED7AA; border-radius:10px; padding:9px 14px; margin-bottom:14px; font-size:0.78rem; color:#92400E;">
+        <strong>&#128161; Princípio da cadência:</strong> São lojistas ativos na plataforma — o relacionamento já existe. Abordagem consultiva e direta, sem pressão. Cadência curta preserva a experiência e aumenta a conversão.
+      </div>
+
+      <div class="three-col" style="margin-bottom:14px; align-items:start;">
+
+        <!-- SDR Cadence -->
+        <div class="card light" style="border-top:3px solid var(--blue);">
+          <h3 class="text-dark" style="margin-bottom:4px; font-size:0.9rem;">&#128222; Cadência SDR — Outbound</h3>
+          <p class="text-muted" style="font-size:0.72rem; margin-bottom:12px;">3.000 contas · 3 toques · janela de 12 dias</p>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:0.78rem;">
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="background:#EEF2FF; color:#4338CA; border-radius:4px; padding:2px 8px; font-weight:700; font-size:0.68rem; flex-shrink:0; margin-top:1px;">D1</span>
+              <span class="text-dark">&#128233; Email consultivo — dado específico da loja (pedidos/mês, GMV) + simulação de economia vs. transportadora atual, gerado por IA</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="background:#EEF2FF; color:#4338CA; border-radius:4px; padding:2px 8px; font-weight:700; font-size:0.68rem; flex-shrink:0; margin-top:1px;">D5</span>
+              <span class="text-dark">&#128222; Ligação — proposta de demo com Closer · abordagem consultiva (já conhece a plataforma, foco em valor logístico)</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="background:#FEF2F2; color:#B91C1C; border-radius:4px; padding:2px 8px; font-weight:700; font-size:0.68rem; flex-shrink:0; margin-top:1px;">D12</span>
+              <span class="text-dark">&#128233; Email final — CTA simples para agendar conversa · sem resposta → "Sem interesse" no HubSpot, retorna ao fluxo de marketing</span>
+            </div>
+          </div>
+          <div style="margin-top:12px; background:#EEF2FF; border-radius:8px; padding:8px 11px; font-size:0.69rem; color:#4338CA; line-height:1.6;">
+            <strong>HubSpot:</strong> Sequence de 12 dias · Task de ligação em D5 · Sem resposta em D12 → tag "Retornar ao Mktg" + deal arquivado
+          </div>
+        </div>
+
+        <!-- Closer Cadence -->
+        <div class="card light" style="border-top:3px solid var(--success);">
+          <h3 class="text-dark" style="margin-bottom:4px; font-size:0.9rem;">&#129309; Cadência Closer — Fechamento</h3>
+          <p class="text-muted" style="font-size:0.72rem; margin-bottom:12px;">Início após handoff SDR · 3 toques · janela de 10 dias</p>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:0.78rem;">
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="background:#ECFDF5; color:#065F46; border-radius:4px; padding:2px 8px; font-weight:700; font-size:0.68rem; flex-shrink:0; margin-top:1px;">D0</span>
+              <span class="text-dark">&#128205; Demo (20min) — já conhecem a plataforma · foco em comparativo de custo/SLA vs. transportadora atual + simulação de economia</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="background:#ECFDF5; color:#065F46; border-radius:4px; padding:2px 8px; font-weight:700; font-size:0.68rem; flex-shrink:0; margin-top:1px;">D3</span>
+              <span class="text-dark">&#128233; Proposta formal — condições + trial gratuito · enviada via HubSpot Deals com link de aceite</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="background:#FEF2F2; color:#B91C1C; border-radius:4px; padding:2px 8px; font-weight:700; font-size:0.68rem; flex-shrink:0; margin-top:1px;">D10</span>
+              <span class="text-dark">&#128222; Ligação de fechamento — decisão final · se perdido, motivo obrigatório no CRM para retroalimentar o pitch</span>
+            </div>
+          </div>
+          <div style="margin-top:12px; background:#ECFDF5; border-radius:8px; padding:8px 11px; font-size:0.69rem; color:#065F46; line-height:1.6;">
+            <strong>HubSpot:</strong> Task D3 e D10 criadas por workflow · Notificação do manager se GMV alto e deal parado em D7 · Motivo de perda obrigatório no fechamento
+          </div>
+        </div>
+
+        <!-- Marketing Automation Cadence -->
+        <div class="card light" style="border-top:3px solid var(--accent);">
+          <h3 class="text-dark" style="margin-bottom:4px; font-size:0.9rem;">&#129302; Fluxo Marketing — Automação</h3>
+          <p class="text-muted" style="font-size:0.72rem; margin-bottom:12px;">17.000 contas · 4 toques · HubSpot Workflows + In-app</p>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:0.78rem;">
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="background:#F0FDFA; color:#0F766E; border-radius:4px; padding:2px 8px; font-weight:700; font-size:0.68rem; flex-shrink:0; margin-top:1px;">D1</span>
+              <span class="text-dark">&#128233; Email direto — "você tem X pedidos sem Nuvem Envio · veja quanto economizaria" + CTA para trial imediato</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="background:#F0FDFA; color:#0F766E; border-radius:4px; padding:2px 8px; font-weight:700; font-size:0.68rem; flex-shrink:0; margin-top:1px;">D8</span>
+              <span class="text-dark">&#128243; In-app banner — contextual na tela de pedidos quando há envio externo detectado · CTA "Usar Nuvem Envio agora"</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="background:#F0FDFA; color:#0F766E; border-radius:4px; padding:2px 8px; font-weight:700; font-size:0.68rem; flex-shrink:0; margin-top:1px;">D15</span>
+              <span class="text-dark">&#128233; Oferta — primeiro envio grátis com prazo de 7 dias · e-mail curto, CTA único</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="background:#F3F4F6; color:#6B7280; border-radius:4px; padding:2px 8px; font-weight:700; font-size:0.68rem; flex-shrink:0; margin-top:1px;">D30+</span>
+              <span class="text-dark">&#128260; Nurture mensal — não-convertidos recebem comunicações esporádicas com novidades e benefícios</span>
+            </div>
+          </div>
+          <div style="margin-top:12px; background:#F0FDFA; border-radius:8px; padding:8px 11px; font-size:0.69rem; color:#0F766E; line-height:1.6;">
+            <strong>HubSpot:</strong> Score +5 abertura · +15 clique · Score ≥ 40 → MQL → task SDR gerada · Clique no trial → deal criado automaticamente
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── 10: IA ── -->
+  <div class="slide bg-white">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">D</div>
+        <div>
+          <p class="slide-tag text-blue">Pipeline e Processos</p>
+          <h2 class="text-dark">Alavancas de Eficiência via IA</h2>
+        </div>
+      </div>
+
+
+      <!-- Canal Comercial -->
+      <p style="font-size:0.7rem; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px;">Canal Comercial — SDR e Closer</p>
+      <div class="three-col" style="margin-bottom:14px; align-items:start;">
+
+        <div class="card light" style="border-top:3px solid var(--blue);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 class="text-dark" style="font-size:0.87rem;">&#127919; Lead Scoring Preditivo</h3>
+            <span class="badge badge-blue" style="font-size:0.62rem;">SDR</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+            <div style="background:#F8FAFF; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#6B7280; font-size:0.65rem; margin-bottom:4px;">&#128229; ENTRADA</div>
+              <span class="text-dark">GMV, pedidos/mês, SOW atual, recência de uso do NE, similaridade com lojistas já ativados</span>
+            </div>
+            <div style="background:#EEF2FF; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#4338CA; font-size:0.65rem; margin-bottom:4px;">&#128228; SAÍDA</div>
+              <span class="text-dark">Ranking 0–100 visível no HubSpot · SDR ataca top 500 primeiro · fila de ligações priorizada automaticamente</span>
+            </div>
+          </div>
+          <div style="background:#ECFDF5; border-radius:7px; padding:7px 10px; font-size:0.72rem; color:#065F46;">
+            <strong>&#128200; Impacto:</strong> Foco nos leads de maior propensão → +20–30% de eficiência na qualificação sem aumentar o time
+          </div>
+        </div>
+
+        <div class="card light" style="border-top:3px solid var(--blue);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 class="text-dark" style="font-size:0.87rem;">&#128172; Brief de Pitch Personalizado</h3>
+            <span class="badge badge-blue" style="font-size:0.62rem;">SDR · Closer</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+            <div style="background:#F8FAFF; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#6B7280; font-size:0.65rem; margin-bottom:4px;">&#128229; ENTRADA</div>
+              <span class="text-dark">Dados da loja no CRM: GMV, pedidos/mês, região, transportadora atual, histórico de interações</span>
+            </div>
+            <div style="background:#EEF2FF; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#4338CA; font-size:0.65rem; margin-bottom:4px;">&#128228; SAÍDA</div>
+              <span class="text-dark">Card gerado por LLM em &lt;30s: argumento de valor específico + simulação de economia + objeções prováveis com respostas</span>
+            </div>
+          </div>
+          <div style="background:#ECFDF5; border-radius:7px; padding:7px 10px; font-size:0.72rem; color:#065F46;">
+            <strong>&#128200; Impacto:</strong> Prep de pitch: 30 min → 3 min · pitch mais relevante → maior taxa de agendamento de demo
+          </div>
+        </div>
+
+        <div class="card light" style="border-top:3px solid var(--blue);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 class="text-dark" style="font-size:0.87rem;">&#128268; Análise de Win/Loss Automática</h3>
+            <span class="badge badge-blue" style="font-size:0.62rem;">RevOps</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+            <div style="background:#F8FAFF; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#6B7280; font-size:0.65rem; margin-bottom:4px;">&#128229; ENTRADA</div>
+              <span class="text-dark">Notas de CRM, motivos de perda registrados pelos Closers</span>
+            </div>
+            <div style="background:#EEF2FF; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#4338CA; font-size:0.65rem; margin-bottom:4px;">&#128228; SAÍDA</div>
+              <span class="text-dark">Report semanal automático: padrões de objeção, correlação win/loss com perfil do lead, sugestão de ajuste no ICP</span>
+            </div>
+          </div>
+          <div style="background:#ECFDF5; border-radius:7px; padding:7px 10px; font-size:0.72rem; color:#065F46;">
+            <strong>&#128200; Impacto:</strong> Feedback loop contínuo → pitch e segmentação melhoram a cada semana sem revisão manual
+          </div>
+        </div>
+      </div>
+
+      <!-- Canal de Automação -->
+      <p style="font-size:0.7rem; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px;">Canal de Automação — Marketing e CS</p>
+      <div class="three-col" style="align-items:start;">
+
+        <div class="card light" style="border-top:3px solid var(--accent);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 class="text-dark" style="font-size:0.87rem;">&#128233; E-mail Personalizado + Send-Time</h3>
+            <span class="badge badge-green" style="font-size:0.62rem;">Marketing</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+            <div style="background:#F8FAFF; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#6B7280; font-size:0.65rem; margin-bottom:4px;">&#128229; ENTRADA</div>
+              <span class="text-dark">Dados da loja (pedidos/mês sem NE, GMV, região) + histórico de horário de acesso ao painel</span>
+            </div>
+            <div style="background:#F0FDFA; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#0F766E; font-size:0.65rem; margin-bottom:4px;">&#128228; SAÍDA</div>
+              <span class="text-dark">E-mail único por lojista com dado específico da loja + CTA + disparado no horário de pico de abertura individual</span>
+            </div>
+          </div>
+          <div style="background:#ECFDF5; border-radius:7px; padding:7px 10px; font-size:0.72rem; color:#065F46;">
+            <strong>&#128200; Impacto:</strong> Open rate +25% vs. template genérico · CTR +40% · escala 17k lojistas sem equipe de copy
+          </div>
+        </div>
+
+        <div class="card light" style="border-top:3px solid var(--accent);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 class="text-dark" style="font-size:0.87rem;">&#128243; In-app Banner Comportamental</h3>
+            <span class="badge badge-green" style="font-size:0.62rem;">PLG</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+            <div style="background:#F8FAFF; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#6B7280; font-size:0.65rem; margin-bottom:4px;">&#128229; ENTRADA</div>
+              <span class="text-dark">Trigger: lojista está na tela de pedidos + envio externo detectado na sessão atual + sessão ativa há &gt;2 min</span>
+            </div>
+            <div style="background:#F0FDFA; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#0F766E; font-size:0.65rem; margin-bottom:4px;">&#128228; SAÍDA</div>
+              <span class="text-dark">Banner contextual: "Este pedido pode ser X% mais barato pelo Nuvem Envio" + CTA de ativação em 1 clique</span>
+            </div>
+          </div>
+          <div style="background:#ECFDF5; border-radius:7px; padding:7px 10px; font-size:0.72rem; color:#065F46;">
+            <strong>&#128200; Impacto:</strong> Melhor momento de persuasão (lojista já está no fluxo de pedido) · conversão sem fricção adicional
+          </div>
+        </div>
+
+        <div class="card light" style="border-top:3px solid var(--accent);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 class="text-dark" style="font-size:0.87rem;">&#128260; Churn Prediction + Alerta CS</h3>
+            <span class="badge badge-green" style="font-size:0.62rem;">CS</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+            <div style="background:#F8FAFF; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#6B7280; font-size:0.65rem; margin-bottom:4px;">&#128229; ENTRADA</div>
+              <span class="text-dark">Frequência semanal de envios do lojista ativado (janela móvel de 4 semanas) vs. baseline do D30 pós-ativação</span>
+            </div>
+            <div style="background:#F0FDFA; border-radius:7px; padding:8px 10px; font-size:0.73rem;">
+              <div style="font-weight:700; color:#0F766E; font-size:0.65rem; margin-bottom:4px;">&#128228; SAÍDA</div>
+              <span class="text-dark">Queda &gt;50% → task automática para CS no HubSpot + health score "Em Risco" + e-mail de reengajamento disparado</span>
+            </div>
+          </div>
+          <div style="background:#ECFDF5; border-radius:7px; padding:7px 10px; font-size:0.72rem; color:#065F46;">
+            <strong>&#128200; Impacto:</strong> CS age antes do churn acontecer · protege D30/D60 e o LTV da coorte ativada
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 10: SQL ── -->
+  <div class="slide bg-brand">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">E</div>
+        <div>
+          <p class="slide-tag text-white">Banco de Dados</p>
+          <h2 class="text-white">Query de Segmentação e KPIs</h2>
+        </div>
+      </div>
+<pre><code><span class="kw">SELECT</span>
+    l.store_id,
+    l.store_name,
+    l.gmv_mensal,
+    l.pedidos_mes,
+    l.regiao,
+    i.email_contato,
+    i.telefone,
+    <span class="fn">COUNT</span>(e.envio_id)  <span class="kw">AS</span> total_envios_90d,
+    <span class="fn">SUM</span>(e.valor_envio) <span class="kw">AS</span> receita_envios_90d,
+    <span class="kw">CASE</span>
+        <span class="kw">WHEN</span> <span class="fn">COUNT</span>(e.envio_id) = <span class="num">0</span> <span class="kw">THEN</span> <span class="str">'Não Utiliza'</span>
+        <span class="kw">ELSE</span> <span class="str">'Utiliza'</span>
+    <span class="kw">END</span> <span class="kw">AS</span> status_aderencia
+
+<span class="kw">FROM</span>      curated.nuvemshop.loja  l
+<span class="kw">LEFT JOIN</span> curated.nuvemshop.infos i <span class="kw">ON</span> l.store_id = i.store_id
+<span class="kw">LEFT JOIN</span> curated.nuvemshop.envio e <span class="kw">ON</span> l.store_id = e.store_id
+      <span class="kw">AND</span> e.data_envio &gt;= <span class="fn">DATE_SUB</span>(<span class="fn">CURRENT_DATE</span>(), <span class="kw">INTERVAL</span> <span class="num">90</span> <span class="kw">DAY</span>)
+
+<span class="kw">WHERE</span> l.is_active   = <span class="kw">TRUE</span>
+  <span class="kw">AND</span> l.gmv_mensal  &gt; <span class="num">5000</span>
+  <span class="kw">AND</span> l.pedidos_mes &gt; <span class="num">20</span>
+
+<span class="kw">GROUP BY</span>
+    l.store_id, l.store_name, l.gmv_mensal,
+    l.pedidos_mes, l.regiao, i.email_contato, i.telefone
+
+<span class="kw">ORDER BY</span> l.gmv_mensal <span class="kw">DESC</span>;
+</code></pre>
+    </div>
+  </div>
+
+  <!-- ── 11: KPIs ── -->
+  <div class="slide bg-white">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">F</div>
+        <div>
+          <p class="slide-tag text-blue">KPIs e Reporting</p>
+          <h2 class="text-dark">Os 3 KPIs Principais da Operação</h2>
+        </div>
+      </div>
+      <div class="three-col" style="margin-bottom:20px;">
+        <div class="card light" style="border-top:4px solid var(--blue);">
+          <div style="font-size:2rem; margin-bottom:10px;">&#128200;</div>
+          <h3 class="text-dark">KPI 1</h3>
+          <div style="font-size:1rem; font-weight:700; color:var(--blue); margin:8px 0;">Taxa de Aderência Logística</div>
+          <p class="text-muted" style="font-size:0.82rem; margin-bottom:10px;">Volume de envios via Nuvem Envio ÷ Total de pedidos da plataforma × 100</p>
+          <div class="stat-box light">
+            <div class="stat-num" style="font-size:1.2rem; color:var(--blue);">Norte: +8,3 p.p.</div>
+            <div class="stat-label">em 3 meses</div>
+          </div>
+          <p class="text-muted" style="font-size:0.75rem; margin-top:8px;">Frequência: semanal · Owner: RevOps</p>
+        </div>
+        <div class="card light" style="border-top:4px solid var(--success);">
+          <div style="font-size:2rem; margin-bottom:10px;">&#9989;</div>
+          <h3 class="text-dark">KPI 2</h3>
+          <div style="font-size:1rem; font-weight:700; color:var(--success); margin:8px 0;">Taxa de Conversão por Canal</div>
+          <p class="text-muted" style="font-size:0.82rem; margin-bottom:10px;">Lojistas ativados ÷ Leads trabalhados por canal (Comercial vs. Automação)</p>
+          <div class="stat-box light">
+            <div class="stat-num" style="font-size:1.2rem; color:var(--success);">20% / 8%</div>
+            <div class="stat-label">Meta M3 · Comercial / Marketing</div>
+          </div>
+          <p class="text-muted" style="font-size:0.75rem; margin-top:8px;">Frequência: diária · Owner: Comercial + Mktg</p>
+        </div>
+        <div class="card light" style="border-top:4px solid #8B5CF6;">
+          <div style="font-size:2rem; margin-bottom:10px;">&#128260;</div>
+          <h3 class="text-dark">KPI 3</h3>
+          <div style="font-size:1rem; font-weight:700; color:#8B5CF6; margin:8px 0;">Retenção D30 dos Ativados</div>
+          <p class="text-muted" style="font-size:0.82rem; margin-bottom:10px;">% dos lojistas ativados que fizeram ≥3 envios nos 30 dias seguintes à ativação</p>
+          <div class="stat-box light">
+            <div class="stat-num" style="font-size:1.2rem; color:#8B5CF6;">Norte: 70%</div>
+            <div class="stat-label">retenção D30</div>
+          </div>
+          <p class="text-muted" style="font-size:0.75rem; margin-top:8px;">Frequência: mensal · Owner: CS + RevOps</p>
+        </div>
+      </div>
+      <div class="card light">
+        <h3 class="text-dark" style="margin-bottom:12px;">&#128202; Dashboard Mensal para Diretoria de Receita</h3>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; font-size:0.8rem;">
+          <div class="task-item text-dark">Receita gerada pelo Nuvem Envio (MRR logístico)</div>
+          <div class="task-item text-dark">Funil de ativação por canal (Comercial × Automação)</div>
+          <div class="task-item text-dark">Taxa de Aderência atual vs. meta (gauge)</div>
+          <div class="task-item text-dark">Cohort de retenção dos ativados (D30 / D60 / D90)</div>
+          <div class="task-item text-dark">Share of Wallet médio por segmento de loja</div>
+          <div class="task-item text-dark">Performance individual do time comercial (ranking)</div>
+          <div class="task-item text-dark">Ativações acumuladas vs. meta trimestral</div>
+          <div class="task-item text-dark">CAC por canal e payback period estimado</div>
+          <div class="task-item text-dark">Heatmap regional de aderência</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 12: DASHBOARD ── -->
+  <div class="slide bg-brand">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num">F</div>
+        <div>
+          <p class="slide-tag text-white">KPIs e Reporting</p>
+          <h2 class="text-white">Projeção Visual — Ativações por Mês</h2>
+        </div>
+      </div>
+      <div class="two-col" style="margin-bottom:16px;">
+        <div class="card" style="padding:20px;">
+          <h3 class="text-white" style="margin-bottom:16px; font-size:0.9rem;">&#128200; Ativações Acumuladas vs. Meta</h3>
+          <div class="chart-wrap" style="height:220px;">
+            <canvas id="chartAtivacoes"></canvas>
+          </div>
+        </div>
+        <div class="card" style="padding:20px;">
+          <h3 class="text-white" style="margin-bottom:16px; font-size:0.9rem;">&#129387; Distribuição por Canal</h3>
+          <div class="chart-wrap" style="height:220px;">
+            <canvas id="chartCanal"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="padding:20px;">
+        <h3 class="text-white" style="margin-bottom:16px; font-size:0.9rem;">&#128184; Margem Mensal Incremental (R$) — ativações acumuladas × R$2,50/envio</h3>
+        <div class="chart-wrap" style="height:150px;">
+          <canvas id="chartReceita"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 13: DOCUMENTAÇÃO ── -->
+  <div class="slide bg-white">
+    <div class="slide-content">
+      <div class="section-header">
+        <div class="section-num" style="background:var(--blue); color:#fff; font-size:0.75rem; letter-spacing:-0.5px;">DOC</div>
+        <div>
+          <p class="slide-tag text-blue">Referência Técnica</p>
+          <h2 class="text-dark">Documentação Completa do Projeto</h2>
+        </div>
+      </div>
+
+      <!-- Linha 1: Segmentação + KPIs -->
+      <div class="two-col" style="gap:12px; margin-bottom:12px;">
+        <div class="card light" style="padding:15px 17px;">
+          <h3 class="text-dark" style="margin-bottom:9px; font-size:0.88rem;">
+            <span class="badge badge-blue" style="margin-right:6px;">A</span> Segmentação e Priorização
+          </h3>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:9px;">
+            <div style="background:#FEF2F2; border-radius:8px; padding:8px; text-align:center;">
+              <div style="font-size:1.1rem; font-weight:800; color:#EF4444;">8.000</div>
+              <div style="font-size:0.68rem; color:#9CA3AF; margin-top:1px;">Não Utiliza · Tier 1</div>
+            </div>
+            <div style="background:#FFFBEB; border-radius:8px; padding:8px; text-align:center;">
+              <div style="font-size:1.1rem; font-weight:800; color:#F59E0B;">7.000</div>
+              <div style="font-size:0.68rem; color:#9CA3AF; margin-top:1px;">Baixo SOW · Tier 2</div>
+            </div>
+            <div style="background:#ECFDF5; border-radius:8px; padding:8px; text-align:center;">
+              <div style="font-size:1.1rem; font-weight:800; color:#10B981;">5.000</div>
+              <div style="font-size:0.68rem; color:#9CA3AF; margin-top:1px;">Utiliza · Upsell</div>
+            </div>
+          </div>
+          <div style="font-size:0.74rem; color:#6B7280; line-height:1.7;">
+            <strong class="text-dark">ICP:</strong> GMV &gt; R$5k/mês · &gt;20 pedidos/mês · SP/RJ/MG/RS<br>
+            <strong class="text-dark">Scoring:</strong> GMV, frequência de envios, região, categoria, transportadora atual<br>
+            <strong class="text-dark">Comercial:</strong> 3.000 contas (Tier 1 alto GMV) &nbsp;·&nbsp; <strong class="text-dark">Automação:</strong> 17.000 contas
+          </div>
+        </div>
+
+        <div class="card light" style="padding:15px 17px;">
+          <h3 class="text-dark" style="margin-bottom:9px; font-size:0.88rem;">
+            <span class="badge badge-blue" style="margin-right:6px;">F</span> KPIs Principais do Projeto
+          </h3>
+          <div style="display:flex; flex-direction:column; gap:7px;">
+            <div style="background:#EEF2FF; border-radius:8px; padding:8px 12px;">
+              <div style="font-size:0.68rem; font-weight:700; color:#4338CA; text-transform:uppercase; letter-spacing:0.5px;">KPI 1 — Aderência Logística</div>
+              <div style="font-size:0.74rem; color:#374151; margin-top:3px;"><strong>Meta: +8,3 p.p.</strong> em 3 meses &nbsp;·&nbsp; Cálculo: envios NE ÷ total envios da plataforma</div>
+            </div>
+            <div style="background:#EEF2FF; border-radius:8px; padding:8px 12px;">
+              <div style="font-size:0.68rem; font-weight:700; color:#4338CA; text-transform:uppercase; letter-spacing:0.5px;">KPI 2 — Taxa de Conversão por Canal</div>
+              <div style="font-size:0.74rem; color:#374151; margin-top:3px;"><strong>Meta M3: 20% comercial / 8% marketing</strong> &nbsp;·&nbsp; Cálculo: ativações ÷ leads trabalhados por canal</div>
+            </div>
+            <div style="background:#EEF2FF; border-radius:8px; padding:8px 12px;">
+              <div style="font-size:0.68rem; font-weight:700; color:#4338CA; text-transform:uppercase; letter-spacing:0.5px;">KPI 3 — Retenção D30 dos Ativados</div>
+              <div style="font-size:0.74rem; color:#374151; margin-top:3px;"><strong>Meta: &gt;70%</strong> no D30 &nbsp;·&nbsp; Cálculo: lojistas c/ ≥3 envios em 30 dias ÷ total ativados no mês</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Linha 2: Ramp-up + Cálculo financeiro -->
+      <div class="card light" style="margin-bottom:12px; padding:15px 17px;">
+        <h3 class="text-dark" style="margin-bottom:9px; font-size:0.88rem;">
+          <span class="badge badge-blue" style="margin-right:6px;">B</span> Escalonamento de Conversão — Ramp-up Trimestral &amp; Impacto Financeiro
+        </h3>
+        <div style="display:grid; grid-template-columns:1.7fr 1fr; gap:12px; align-items:start;">
+          <div class="table-wrap">
+            <table style="font-size:0.76rem;">
+              <thead>
+                <tr><th>Mês</th><th>Tx Comercial</th><th>Ativ. Com.</th><th>Tx Marketing</th><th>Ativ. Mktg</th><th>Total</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><span class="badge badge-blue">M1</span> Setup</td><td>16%</td><td>160</td><td>5,5%</td><td>330</td><td><strong>490</strong></td></tr>
+                <tr><td><span class="badge badge-yellow">M2</span> Aceleração</td><td>18%</td><td>180</td><td>6,5%</td><td>390</td><td><strong>570</strong></td></tr>
+                <tr><td><span class="badge badge-green">M3</span> Otimização</td><td><strong>20%</strong></td><td>200</td><td><strong>8%</strong></td><td>400</td><td><strong>600</strong></td></tr>
+                <tr style="background:#EEF2FF;"><td><strong>Total</strong></td><td style="color:var(--blue); font-weight:700;">18% médio</td><td><strong>540</strong></td><td style="color:var(--blue); font-weight:700;">6,6% médio</td><td><strong>1.120</strong></td><td style="color:var(--blue); font-weight:800;">1.660</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="background:#F8FAFF; border:1px solid #E5E7EB; border-radius:10px; padding:11px 13px; font-size:0.74rem; color:#374151; line-height:1.8;">
+            <div style="font-weight:700; color:#9CA3AF; font-size:0.67rem; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px;">Premissas e Fórmulas</div>
+            Ticket médio: <strong>R$25,00</strong><br>
+            Margem/envio: <strong>R$2,50 (10%)</strong><br>
+            Envios/lojista/mês: <strong>20 ¹</strong><br>
+            <div style="border-top:1px solid #E5E7EB; margin:6px 0;"></div>
+            Baseline → 1.150 × 20 × R$2,50 = <strong style="color:#9CA3AF;">R$57.500/mês</strong><br>
+            Meta &nbsp;&nbsp;&nbsp;&nbsp;→ 1.660 × 20 × R$2,50 = <strong style="color:var(--success);">R$83.000/mês</strong><br>
+            <strong style="color:var(--success);">Ganho: +R$25.500/mês (+44%)</strong>
+            <div style="border-top:1px solid #E5E7EB; margin:6px 0;"></div>
+            <strong style="color:#4338CA;">LTV/lojista: R$900</strong> (18m × R$50/mês)<br>
+            CAC comerc.: <strong>R$444</strong> · CAC autom.: <strong>R$27</strong><br>
+            LTV:CAC: <strong style="color:#4338CA;">2× comerc. / 33× autom.</strong><br>
+            Payback: <strong>~9m comerc. / &lt;1m autom.</strong><br>
+            Custo time: <strong>~R$80k/mês</strong> (9 pessoas)<br>
+            <div style="font-size:0.65rem; color:#9CA3AF; margin-top:4px; line-height:1.5;">¹ Premissa conservadora — validar com média histórica de envios/loja ativa nos últimos 90 dias.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Linha 3: Pipeline + Comissão -->
+      <div class="two-col" style="gap:12px;">
+        <div class="card light" style="padding:15px 17px;">
+          <h3 class="text-dark" style="margin-bottom:9px; font-size:0.88rem;">
+            <span class="badge badge-blue" style="margin-right:6px;">D</span> Pipeline CRM — Estágios e Gatilhos
+          </h3>
+          <div style="font-size:0.73rem; color:#374151; line-height:1.75;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;"><span style="background:#DBEAFE; color:#1D4ED8; border-radius:4px; padding:1px 7px; font-weight:700; font-size:0.68rem;">1</span> Lead Identificado — 3.000 contas · GMV alto + não usa NE</div>
+            <div style="font-size:0.68rem; color:#9CA3AF; margin-left:30px; margin-bottom:3px;">↓ Gatilho: Contato confirmado (call / e-mail reply)</div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;"><span style="background:#DBEAFE; color:#1D4ED8; border-radius:4px; padding:1px 7px; font-weight:700; font-size:0.68rem;">2</span> Primeiro Contato — ~1.500 (SDR qualifica)</div>
+            <div style="font-size:0.68rem; color:#9CA3AF; margin-left:30px; margin-bottom:3px;">↓ Gatilho: Demonstra interesse e agenda demo</div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;"><span style="background:#DBEAFE; color:#1D4ED8; border-radius:4px; padding:1px 7px; font-weight:700; font-size:0.68rem;">3</span> Demo / Apresentação — ~700 (Closer + comparativo de custo)</div>
+            <div style="font-size:0.68rem; color:#9CA3AF; margin-left:30px; margin-bottom:3px;">↓ Gatilho: Solicita proposta formal</div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;"><span style="background:#DBEAFE; color:#1D4ED8; border-radius:4px; padding:1px 7px; font-weight:700; font-size:0.68rem;">4</span> Proposta Enviada — ~400 (simulação de economia)</div>
+            <div style="font-size:0.68rem; color:#9CA3AF; margin-left:30px; margin-bottom:3px;">↓ Gatilho: Proposta aceita, início de negociação</div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;"><span style="background:#DBEAFE; color:#1D4ED8; border-radius:4px; padding:1px 7px; font-weight:700; font-size:0.68rem;">5</span> Negociação — ~250 (ajuste desconto / trial)</div>
+            <div style="font-size:0.68rem; color:#9CA3AF; margin-left:30px; margin-bottom:3px;">↓ Gatilho: Acordo fechado, conta integrada ao NE</div>
+            <div style="display:flex; align-items:center; gap:8px;"><span style="background:#D1FAE5; color:#065F46; border-radius:4px; padding:1px 7px; font-weight:700; font-size:0.68rem;">6</span> <strong>Closed-Won — ~540 ativações · Conv. 20% no M3</strong></div>
+          </div>
+        </div>
+
+        <div class="card light" style="padding:15px 17px;">
+          <h3 class="text-dark" style="margin-bottom:9px; font-size:0.88rem;">
+            <span class="badge badge-blue" style="margin-right:6px;">B</span> Modelo de Comissionamento
+          </h3>
+          <div style="display:flex; flex-direction:column; gap:7px; font-size:0.74rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#F0FDF4; border-radius:8px; padding:8px 12px;">
+              <span style="color:#374151;">Bônus de Ativação <span style="color:#9CA3AF;">(mín. 10 envios / 30 dias)</span></span>
+              <strong style="color:#10B981; font-size:1rem; margin-left:12px;">R$60</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#EEF2FF; border-radius:8px; padding:8px 12px;">
+              <span style="color:#374151;">Comissão Recorrente <span style="color:#9CA3AF;">(por 6 meses após ativação)</span></span>
+              <strong style="color:#4338CA; font-size:1rem; margin-left:12px;">3%</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#FFFBEB; border-radius:8px; padding:8px 12px;">
+              <span style="color:#374151;">Acelerador de Qualidade <span style="color:#9CA3AF;">(50+ envios no M+1)</span></span>
+              <strong style="color:#D97706; font-size:1rem; margin-left:12px;">R$120</strong>
+            </div>
+            <div style="background:#F9FAFB; border-radius:8px; padding:9px 12px; font-size:0.71rem; color:#6B7280; line-height:1.8;">
+              <strong class="text-dark">Gate:</strong> mínimo de 10 envios em 30 dias para contar ativação<br>
+              <strong class="text-dark">Clawback:</strong> comissão cancelada se cliente churna em &lt;60 dias<br>
+              <strong class="text-dark">Bônus equipe:</strong> +20% individual se o time superar 110% da meta<br>
+              <strong class="text-dark">Cap:</strong> sem teto — quanto mais ativar, mais o vendedor ganha
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 14: CONCLUSÃO ── -->
+  <div class="slide bg-brand">
+    <div style="text-align:center; max-width:700px;">
+      <div class="logo" style="justify-content:center; margin-bottom:20px;">
+        <div class="logo-icon">
+          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="26" height="26">
+            <path d="M12.5 17C12.5 13.96 14.96 11.5 18 11.5c2.06 0 3.86 1.1 4.86 2.76" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M20.5 10.8l3.1 3.5-3.6 1.3" stroke="white" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M23.5 19c0 3.04-2.46 5.5-5.5 5.5-2.06 0-3.86-1.1-4.86-2.76" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M15.5 25.2l-3.1-3.5 3.6-1.3" stroke="white" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="logo-text">nuvemshop</span>
+      </div>
+      <p class="slide-tag text-white" style="opacity:0.8;">Resumo Executivo</p>
+      <h2 class="text-white" style="font-size:2rem; margin-bottom:20px;">Plano em uma frase</h2>
+      <div class="card" style="text-align:left; margin-bottom:24px;">
+        <p class="text-white" style="font-size:1rem; line-height:1.7;">
+          Segmentar os 20.000 lojistas por GMV e aderência, atacar as <strong>3.000 contas de alto valor com time comercial</strong> e as demais <strong>17.000 via automação</strong>, usando IA para priorizar leads e personalizar abordagens — gerando <strong>1.660 novas ativações</strong> e <strong>+8,3 p.p. de aderência logística</strong> em 3 meses.
+        </p>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:28px;">
+        <div class="stat-box">
+          <div class="stat-num text-white">1.660</div>
+          <div class="stat-label text-white">Novas ativações</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num text-white">+8,3 p.p.</div>
+          <div class="stat-label text-white">Ganho de aderência</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num text-white">R$83k</div>
+          <div class="stat-label text-white">Margem mensal nova</div>
+        </div>
+      </div>
+      <p class="text-white" style="opacity:0.6; font-size:0.85rem;">Obrigado pela atenção &#128640; &nbsp;·&nbsp; Use ← → para navegar</p>
+    </div>
+  </div>
+
+</div><!-- /slides-wrapper -->
+
+<script>
+  const slides   = Array.from(document.querySelectorAll('.slide'));
+  const tabItems = Array.from(document.querySelectorAll('.tab-item'));
+  const tabNav   = document.getElementById('tab-nav');
+  let current = 0;
+  let chartsInited = false;
+
+  function goTo(n) {
+    if (n < 0 || n >= slides.length) return;
+    slides[current].classList.remove('active');
+    tabItems[current].classList.remove('active');
+    current = n;
+    slides[current].classList.add('active');
+    tabItems[current].classList.add('active');
+    // Tab bar adapts to slide background
+    tabNav.className = slides[current].classList.contains('bg-white') ? 'on-light' : 'on-dark';
+    // Scroll active tab into view
+    tabItems[current].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    if (current === 12 && !chartsInited) { initCharts(); chartsInited = true; }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+  });
+
+  let touchX = null;
+  document.addEventListener('touchstart', e => { touchX = e.changedTouches[0].clientX; });
+  document.addEventListener('touchend',   e => {
+    if (touchX === null) return;
+    const dx = touchX - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 50) goTo(current + (dx > 0 ? 1 : -1));
+    touchX = null;
+  });
+
+  // ── Charts ─────────────────────────────────────────────────────
+  function initCharts() {
+    Chart.defaults.color = 'rgba(255,255,255,0.65)';
+    Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+    const gridColor = 'rgba(255,255,255,0.08)';
+
+    new Chart(document.getElementById('chartAtivacoes'), {
+      type: 'bar',
+      data: {
+        labels: ['Mês 1', 'Mês 2', 'Mês 3'],
+        datasets: [
+          { label: 'Comercial', data: [160, 180, 200], backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 6 },
+          { label: 'Automação', data: [330, 390, 400], backgroundColor: '#00D4AA', borderRadius: 6 },
+          {
+            label: 'Meta Acumulada', data: [490, 1060, 1660], type: 'line',
+            borderColor: '#F59E0B', backgroundColor: 'transparent',
+            borderWidth: 2, borderDash: [6,3], pointBackgroundColor: '#F59E0B', tension: 0.4,
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
+        scales: {
+          x: { grid: { color: gridColor }, stacked: true },
+          y: { grid: { color: gridColor }, stacked: true, beginAtZero: true }
+        }
+      }
+    });
+
+    new Chart(document.getElementById('chartCanal'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Automação (17k)', 'Comercial (3k)'],
+        datasets: [{
+          data: [1120, 540],
+          backgroundColor: ['#00D4AA', 'rgba(255,255,255,0.85)'],
+          borderColor: 'rgba(3,64,204,0.6)',
+          borderWidth: 3,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 16 } } }
+      }
+    });
+
+    new Chart(document.getElementById('chartReceita'), {
+      type: 'line',
+      data: {
+        labels: ['Mês 1', 'Mês 2', 'Mês 3', 'Mês 4 (projeção)'],
+        datasets: [{
+          label: 'Receita Incremental (R$)',
+          data: [24500, 53000, 83000, 95000],
+          borderColor: '#00D4AA',
+          backgroundColor: 'rgba(0,212,170,0.12)',
+          fill: true, tension: 0.4,
+          pointBackgroundColor: '#00D4AA', pointRadius: 5,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { size: 11 } } } },
+        scales: {
+          x: { grid: { color: gridColor } },
+          y: {
+            grid: { color: gridColor }, beginAtZero: true,
+            ticks: { callback: v => 'R$' + (v / 1000).toFixed(0) + 'k' }
+          }
+        }
+      }
+    });
+  }
+</script>
+</body>
+</html>
